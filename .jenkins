@@ -1,0 +1,85 @@
+pipeline {
+
+    agent any
+
+    triggers {
+        upstream(upstreamProjects: 'vapor-ware/foundations/master', threshold: hudson.model.Result.SUCCESS)
+    }
+
+    environment {
+        imageName = 'vaporio/buildpack-deps'
+    }
+
+    stages {
+
+        stage('Build curl') {
+            parallel {
+                stage('ubuntu:bionic') {
+                    steps {
+                        sh "docker build -t bionic-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/curl"
+                        sh "docker tag bionic-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-curl"
+                    }
+                }
+
+                stage('ubuntu:xenial') {
+                    steps {
+                        sh "docker build -t xenial-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/curl"
+                        sh "docker tag xenial-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-curl"
+                    }
+                }
+            }
+        }
+
+        stage('Build scm') {
+            parallel {
+                stage('ubuntu:bionic') {
+                    steps {
+                        sh "docker build -t bionic-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/scm"
+                        sh "docker tag bionic-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-scm"
+                    }
+                }
+
+                stage('ubuntu:xenial') {
+                    steps {
+                        sh "docker build -t xenial-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/scm"
+                        sh "docker tag xenial-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-scm"
+                    }
+                }
+            }
+        }
+
+        stage('Build') {
+            parallel {
+                stage('ubuntu:bionic') {
+                    steps {
+                        sh "docker build -t bionic-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic"
+                        sh "docker tag bionic-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic"
+                    }
+                }
+
+                stage('ubuntu:xenial') {
+                    steps {
+                        sh "docker build -t xenial-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial"
+                        sh "docker tag xenial-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial"
+                    }
+                }
+            }
+        }
+
+        stage('Publish') {
+            when {
+                branch 'master'
+            }
+            steps {
+                withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                    sh "docker push ${imageName}:bionic-curl"
+                    sh "docker push ${imageName}:bionic-scm"
+                    sh "docker push ${imageName}:bionic"
+                    sh "docker push ${imageName}:xenial-curl"
+                    sh "docker push ${imageName}:xenial-scm"
+                    sh "docker push ${imageName}:xenial"
+                }
+            }
+        }
+    }
+}
