@@ -1,4 +1,4 @@
-FROM buildpack-deps:bionic-scm
+FROM vaporio/buildpack-deps:bionic-scm
 
 RUN set -ex; \
 	apt-get update; \

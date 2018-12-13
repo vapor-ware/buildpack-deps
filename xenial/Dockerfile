@@ -1,4 +1,4 @@
-FROM buildpack-deps:xenial-scm
+FROM vaporio/buildpack-deps:xenial-scm
 
 RUN set -ex; \
 	apt-get update; \
