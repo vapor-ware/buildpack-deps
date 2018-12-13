@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM vaporio/foundation:bionic
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates \

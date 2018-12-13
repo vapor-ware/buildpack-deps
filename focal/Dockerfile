@@ -1,4 +1,4 @@
-FROM buildpack-deps:focal-scm
+FROM vaporio/buildpack-deps:focal-scm
 
 RUN set -ex; \
 	apt-get update; \

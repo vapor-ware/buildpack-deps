@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM vaporio/foundation:xenial
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates \
