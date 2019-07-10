@@ -182,7 +182,7 @@ pipeline {
                     steps {
                         withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
                             sh "docker manifest create --amend ${imageName}:bionic-scm ${imageName}:bionic-scm-amd64 ${imageName}:bionic-scm-arm64"
-                            sh "docker manifest push --purge ${imageName}:latest"
+                            sh "docker manifest push --purge ${imageName}:bionic-scm"
                         }
                     }
                 }
