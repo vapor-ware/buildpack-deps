@@ -67,6 +67,9 @@ pipeline {
         }
 
         stage('Publish') {
+            when {
+                branch 'master'
+            }
             steps {
                 withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
                     sh "docker push ${imageName}:bionic-curl"
