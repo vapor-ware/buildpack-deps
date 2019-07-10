@@ -14,35 +14,185 @@ pipeline {
 
         stage('Build curl') {
             parallel {
-                stage('ubuntu:bionic') {
+                stage('ubuntu:bionic amd64') {
                     steps {
-                        sh "docker build -t bionic-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/curl"
-                        sh "docker tag bionic-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-curl"
+                        sh "docker build -t bionic-curl:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/curl"
+                        sh "docker tag bionic-curl:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-curl-amd64"
                     }
                 }
 
-                stage('ubuntu:xenial') {
+                stage('ubuntu:xenial amd64') {
                     steps {
-                        sh "docker build -t xenial-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/curl"
-                        sh "docker tag xenial-curl:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-curl"
+                        sh "docker build -t xenial-curl:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/curl"
+                        sh "docker tag xenial-curl:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-curl-amd64"
+                    }
+                }
+
+                stage('ubuntu:bionic arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        sh "docker build -t bionic-curl:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/curl"
+                        sh "docker tag bionic-curl:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-curl-arm64"
+                    }
+                }
+
+                stage('ubuntu:xenial arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        sh "docker build -t xenial-curl:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/curl"
+                        sh "docker tag xenial-curl:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-curl-arm64"
                     }
                 }
             }
         }
 
-        stage('Build scm') {
+        stage('Publish curl Images') {
+            when {
+                branch 'master'
+            }
             parallel {
-                stage('ubuntu:bionic') {
+                stage('amd64') {
                     steps {
-                        sh "docker build -t bionic-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/scm"
-                        sh "docker tag bionic-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-scm"
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker push ${imageName}:bionic-curl-amd64"
+                            sh "docker push ${imageName}:xenial-curl-amd64"
+                        }
                     }
                 }
 
-                stage('ubuntu:xenial') {
+                stage('arm64') {
+                    agent {
+                        label 'arm64'
+                    }
                     steps {
-                        sh "docker build -t xenial-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/scm"
-                        sh "docker tag xenial-scm:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-scm"
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker push ${imageName}:bionic-curl-arm64"
+                            sh "docker push ${imageName}:xenial-curl-arm64"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Publish curl Manifests') {
+            when {
+                branch 'master'
+            }
+
+            parallel {
+                stage('bionic-curl') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker manifest create --amend ${imageName}:bionic-curl ${imageName}:bionic-curl-amd64 ${imageName}:bionic-curl-arm64"
+                            sh "docker manifest push --purge ${imageName}:bionic-curl"
+                        }
+                    }
+                }
+
+                stage('xenial-curl') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker manifest create --amend ${imageName}:xenial-curl ${imageName}:xenial-curl-amd64 ${imageName}:xenial-curl-arm64"
+                            sh "docker manifest push --purge ${imageName}:xenial-curl"
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+        stage('Build scm') {
+            parallel {
+                stage('ubuntu:bionic amd64') {
+                    steps {
+                        sh "docker build -t bionic-scm:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/scm"
+                        sh "docker tag bionic-scm:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-scm-amd64"
+                    }
+                }
+
+                stage('ubuntu:xenial amd64') {
+                    steps {
+                        sh "docker build -t xenial-scm:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/scm"
+                        sh "docker tag xenial-scm:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-scm-amd64"
+                    }
+                }
+
+                stage('ubuntu:bionic arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        sh "docker build -t bionic-scm:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic/scm"
+                        sh "docker tag bionic-scm:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-scm-arm64"
+                    }
+                }
+
+                stage('ubuntu:xenial arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        sh "docker build -t xenial-scm:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial/scm"
+                        sh "docker tag xenial-scm:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-scm-arm64"
+                    }
+                }
+            }
+        }
+
+        stage('Publish scm Images') {
+            when {
+                branch 'master'
+            }
+            parallel {
+                stage('amd64') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker push ${imageName}:bionic-scm-amd64"
+                            sh "docker push ${imageName}:xenial-scm-amd64"
+                        }
+                    }
+                }
+
+                stage('arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker push ${imageName}:bionic-scm-arm64"
+                            sh "docker push ${imageName}:xenial-scm-arm64"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Publish scm Manifests') {
+            when {
+                branch 'master'
+            }
+
+            parallel {
+                stage('bionic-scm') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker manifest create --amend ${imageName}:bionic-scm ${imageName}:bionic-scm-amd64 ${imageName}:bionic-scm-arm64"
+                            sh "docker manifest push --purge ${imageName}:latest"
+                        }
+                    }
+                }
+
+                stage('xenial-scm') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker manifest create --amend ${imageName}:xenial-scm ${imageName}:xenial-scm-amd64 ${imageName}:xenial-scm-arm64"
+                            sh "docker manifest push --purge ${imageName}:xenial-scm"
+                        }
                     }
                 }
             }
@@ -50,34 +200,92 @@ pipeline {
 
         stage('Build') {
             parallel {
-                stage('ubuntu:bionic') {
+                stage('ubuntu:bionic amd64') {
                     steps {
-                        sh "docker build -t bionic-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic"
-                        sh "docker tag bionic-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic"
+                        sh "docker build -t bionic-bp:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic"
+                        sh "docker tag bionic-bp:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-amd64"
                     }
                 }
 
-                stage('ubuntu:xenial') {
+                stage('ubuntu:xenial amd64') {
                     steps {
-                        sh "docker build -t xenial-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial"
-                        sh "docker tag xenial-bp:${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial"
+                        sh "docker build -t xenial-bp:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial"
+                        sh "docker tag xenial-bp:amd64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-amd64"
+                    }
+                }
+
+                stage('ubuntu:bionic arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        sh "docker build -t bionic-bp:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress bionic"
+                        sh "docker tag bionic-bp:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:bionic-arm64"
+                    }
+                }
+
+                stage('ubuntu:xenial arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        sh "docker build -t xenial-bp:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} --compress xenial"
+                        sh "docker tag xenial-bp:arm64.${env.BRANCH_NAME}.${env.BUILD_NUMBER} ${imageName}:xenial-arm64"
                     }
                 }
             }
         }
 
-        stage('Publish') {
+        stage('Publish Images') {
             when {
                 branch 'master'
             }
-            steps {
-                withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
-                    sh "docker push ${imageName}:bionic-curl"
-                    sh "docker push ${imageName}:bionic-scm"
-                    sh "docker push ${imageName}:bionic"
-                    sh "docker push ${imageName}:xenial-curl"
-                    sh "docker push ${imageName}:xenial-scm"
-                    sh "docker push ${imageName}:xenial"
+            parallel {
+                stage('amd64') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker push ${imageName}:bionic-amd64"
+                            sh "docker push ${imageName}:xenial-amd64"
+                        }
+                    }
+                }
+
+                stage('arm64') {
+                    agent {
+                        label 'arm64'
+                    }
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker push ${imageName}:bionic-arm64"
+                            sh "docker push ${imageName}:xenial-arm64"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Publish Manifests') {
+            when {
+                branch 'master'
+            }
+
+            parallel {
+                stage('bionic') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker manifest create --amend ${imageName}:bionic ${imageName}:bionic-amd64 ${imageName}:bionic-arm64"
+                            sh "docker manifest push --purge ${imageName}:bionic"
+                        }
+                    }
+                }
+
+                stage('xenial') {
+                    steps {
+                        withDockerRegistry(registry: [credentialsId: 'vio-docker-hub']) {
+                            sh "docker manifest create --amend ${imageName}:xenial ${imageName}:xenial-amd64 ${imageName}:xenial-arm64"
+                            sh "docker manifest push --purge ${imageName}:xenial"
+                        }
+                    }
                 }
             }
         }
